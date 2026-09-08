@@ -13,12 +13,13 @@
     "test:utils": "node --test tests/utils.test.mjs"
   },
   "dependencies": {
+    "@tauri-apps/api": "latest",
+    "@tauri-apps/plugin-os": "^2.3.2",
     "@vitejs/plugin-react": "latest",
-    "vite": "latest",
+    "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "lucide-react": "latest",
-    "@tauri-apps/api": "latest"
+    "vite": "latest"
   },
   "devDependencies": {
     "@tauri-apps/cli": "latest"

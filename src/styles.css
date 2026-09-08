@@ -18,3 +18,33 @@
 .dark .window-control{color:#c4d0cc}
 .dark .window-control:hover:not(:disabled){background:#2d393a;color:#8be0ba}
 .dark .window-close:hover:not(:disabled){background:#b94740;color:#fff}
+
+/* Match the window chrome to the host desktop while keeping the webview frameless. */
+.titlebar{position:relative}
+.titlebar-macos{justify-content:flex-start;padding:0 16px}
+.titlebar-macos .titlebar-drag-region{justify-content:center}
+.titlebar-macos .brand-mini{position:absolute;left:50%;transform:translateX(-50%);pointer-events:none}
+.macos-controls{position:relative;z-index:2;display:flex;flex:0 0 auto;align-items:center;gap:8px}
+.macos-control{width:13px;min-width:13px;height:13px;padding:0;border:1px solid transparent;border-radius:50%;box-shadow:inset 0 0 0 .5px #0003,0 0 0 .5px #0002;color:transparent;transition:filter .14s ease,transform .14s ease}
+.macos-control svg{width:8px;height:8px;stroke-width:2.8;opacity:0;transition:opacity .14s ease;color:#4b3d3a}
+.macos-control:hover:not(:disabled),.macos-control:focus-visible{transform:scale(1.08);filter:saturate(.9) brightness(.96)}
+.macos-control:hover:not(:disabled) svg,.macos-control:focus-visible svg{opacity:1}
+.macos-control:focus-visible{outline:2px solid #168565;outline-offset:3px}
+.macos-close{background:#ff5f57;border-color:#e0443e}
+.macos-minimize{background:#febc2e;border-color:#dea123}
+.macos-maximize{background:#28c840;border-color:#1dad2b}
+.macos-close:hover:not(:disabled){background:#ff5f57;color:transparent}
+.macos-minimize:hover:not(:disabled){background:#febc2e;color:transparent}
+.macos-maximize:hover:not(:disabled){background:#28c840;color:transparent}
+.windows-controls{gap:0}
+.windows-controls .window-control{width:46px;min-width:46px;height:34px;border-radius:0}
+.windows-controls .window-control:hover:not(:disabled){background:#e7eeeb;color:#116f55}
+.windows-controls .window-close:hover:not(:disabled){background:#c42b1c;color:#fff}
+.linux-controls{gap:4px}
+.linux-controls .window-control{width:36px;min-width:36px;height:32px;border-radius:4px}
+.linux-controls .window-control:hover:not(:disabled){background:#dfe8e4;color:#116f55}
+.linux-controls .window-close:hover:not(:disabled){background:#d95c52;color:#fff}
+.dark .windows-controls .window-control:hover:not(:disabled){background:#2d393a;color:#8be0ba}
+.dark .windows-controls .window-close:hover:not(:disabled){background:#c0443c;color:#fff}
+.dark .linux-controls .window-control:hover:not(:disabled){background:#303b3c;color:#8be0ba}
+.dark .linux-controls .window-close:hover:not(:disabled){background:#b94740;color:#fff}
