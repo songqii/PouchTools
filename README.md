@@ -1,83 +1,132 @@
 # PouchTools
 
+**Cross-platform developer utilities for everyday engineering work.**
+
+[![Tauri 2](https://img.shields.io/badge/Tauri-2-24c8db?logo=tauri&logoColor=white)](https://tauri.app/)
+[![Rust 1.92](https://img.shields.io/badge/Rust-1.92.0-000000?logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 **Documentation:** English · [简体中文](README.zh-CN.md)
 
-A cross-platform developer utility collection built with Rust and Tauri 2.
+PouchTools is a lightweight desktop toolbox for developers. It uses a Rust and Tauri 2 core with a React interface, processes data locally, and targets macOS, Windows, and Linux from one codebase.
 
-## Features
+> **Project status:** Early preview. Base64 is the first usable tool; MD5 and timestamp screens currently demonstrate the planned interaction model. See [Limitations](#limitations).
 
-- Base64 UTF-8 encoding and decoding
-- MD5 hashing and checksum verification
-- Timestamp and date conversion
+## Highlights
+
+- Local-first processing for the supported text operations
+- Native desktop window behavior with close-to-tray support
+- macOS Dock hiding while the application is in the tray
 - Light and dark themes
 - English and Simplified Chinese interface switching
-- Close-to-tray behavior with native macOS, Windows, and Linux window controls
+- Release automation for macOS ARM64, macOS Intel, Windows x64, and Linux x64
 
-Some tools are still preview placeholders. See [Current limitations](#current-limitations).
+## Tools
+
+| Tool | Status | Notes |
+| --- | --- | --- |
+| Base64 | Available | UTF-8 text encode/decode, copy, and clear |
+| MD5 | Preview | Hash display and verification UI; calculation integration is pending |
+| Timestamp | Preview | Date/timestamp conversion UI; conversion integration is pending |
+| JSON formatter | Planned | Placeholder entry |
+| URL encoder/decoder | Planned | Placeholder entry |
+| UUID generator | Planned | Placeholder entry |
+
+## Install
+
+Download the latest packages from [GitHub Releases](https://github.com/songqii/PouchTools/releases).
+
+| Platform | Architecture | Package |
+| --- | --- | --- |
+| macOS | Apple Silicon | `.dmg` |
+| macOS | Intel | `.dmg` |
+| Windows | x64 | NSIS `.exe` or WiX `.msi` |
+| Linux | x64 | `.deb` or `.AppImage` |
+
+Every build includes a `SHA256SUMS-<target>.txt` file. Linux packages are built on Ubuntu 22.04. AppImage may require executable permission:
+
+```bash
+chmod +x PouchTools_*.AppImage
+```
+
+Current preview packages are unsigned or ad-hoc signed. macOS may show a Gatekeeper warning, and Windows may show an unverified publisher warning.
 
 ## Development
 
-Install dependencies and start the Tauri desktop client:
+### Prerequisites
+
+- Node.js 24
+- Rust 1.92.0
+- Tauri 2 system dependencies for your platform
+
+### Run locally
 
 ```bash
-npm install
+npm ci
 npm run tauri:dev
 ```
 
-Build the frontend or a local release bundle:
+Build and validate the frontend:
 
 ```bash
 npm run build
+node scripts/check-release-version.mjs
+node --test scripts/release.test.mjs
+```
+
+Build a local desktop bundle:
+
+```bash
 npm run tauri:build
 ```
 
-When the main window is closed, PouchTools stays in the system tray. On macOS the Dock icon is hidden while the window is hidden. Select **Show window** from the tray menu to restore it, or select **Quit** to exit completely.
+Closing the main window hides PouchTools in the system tray. On macOS, the Dock icon is hidden while the window is hidden. Use **Show window** in the tray menu to restore it, or **Quit** to exit.
 
-## GitHub Actions installers
+## Release automation
 
-The workflow in `.github/workflows/release.yml` uses Rust 1.92.0 and Node.js 24, installs locked dependencies, and builds release installers in GitHub-hosted runners.
+The workflow at [`.github/workflows/release.yml`](.github/workflows/release.yml) builds signed/unsigned preview installers on GitHub-hosted runners:
 
-| Platform | Architecture | Packages |
-| --- | --- | --- |
-| macOS | Apple Silicon (ARM64) | `.dmg` |
-| macOS | Intel (x64) | `.dmg` |
-| Windows | x64 | NSIS `.exe`, WiX `.msi` |
-| Linux | x64 | `.deb`, `.AppImage` |
+- Pushes to `main` build all supported targets and upload workflow artifacts.
+- A matching version tag such as `v0.1.0` builds all targets and creates a draft Release.
+- The draft includes platform installers, SHA-256 files, and the matching notes from [`docs/releases/`](docs/releases/).
+- macOS DMG packaging retries transient failures up to three times.
 
-Each target also produces a `SHA256SUMS-<target>.txt` file. Linux packages are built on Ubuntu 22.04. The `.deb` declares its WebKitGTK runtime dependencies, and tray support depends on the desktop environment's AppIndicator support.
+Before tagging a release, keep these versions aligned:
 
-### Build from a branch
+- `package.json`
+- `src-tauri/tauri.conf.json`
+- `src-tauri/Cargo.toml`
+- `package-lock.json`
+- `src-tauri/Cargo.lock`
 
-Pushes to `main` build all four targets. You can also use **Actions → Build installers → Run workflow**. Branch and manual builds do not create a Release; their artifacts are retained for 30 days.
-
-### Publish a release
-
-Keep the versions in `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, `package-lock.json`, and `src-tauri/Cargo.lock` aligned. Check them with:
+Validate them with:
 
 ```bash
 node scripts/check-release-version.mjs
 ```
 
-After committing a version update, push a matching tag:
+Create a release tag after committing the version change:
 
 ```bash
-git tag -a v0.1.0 -m "PouchTools 0.1.0"
+git tag -a v0.1.0 -m "PouchTools v0.1.0"
 git push origin v0.1.0
 ```
 
-The workflow builds every target, creates a draft GitHub Release, attaches six installers and their checksum files, and uses the matching file in `docs/releases/` as the release description. Review the draft and publish it from GitHub Releases.
+## Architecture
 
-If macOS DMG packaging fails transiently, the workflow retries it up to three times. A `repository_dispatch` event with type `release-retry` and `client_payload.tag` can rebuild an existing tag using the latest workflow on `main`.
+- **UI:** React, Vite, and Lucide icons
+- **Desktop runtime:** Tauri 2
+- **Native layer:** Rust
+- **Release CI:** GitHub Actions
+- **Supported targets:** `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-pc-windows-msvc`, and `x86_64-unknown-linux-gnu`
 
-The release job uses GitHub's built-in `GITHUB_TOKEN`; no personal access token is required. It needs `contents: write` permission.
+## Limitations
 
-## Current limitations
-
-- MD5 and timestamp screens are currently preview interfaces with fixed sample results; they are not ready for production calculations.
-- JSON formatting, URL encoding/decoding, and UUID generation are placeholder entries.
-- Search, settings, favorites, file input, Base64 URL-safe mode, conversion history, live current time, and preference persistence are not connected yet.
-- MD5 is a one-way hash and cannot decrypt or restore the original input.
-- macOS packages use ad-hoc signing without Developer ID notarization. Windows packages do not use Authenticode signing, so the operating system may show an unverified publisher warning.
+- MD5 and timestamp pages currently show fixed preview values and are not ready for production calculations.
+- JSON, URL, and UUID entries are placeholders.
+- Search, settings, favorites, file input, Base64 URL-safe mode, conversion history, live time, and preference persistence are not connected yet.
+- MD5 is a one-way hash; it cannot decrypt or restore the original input.
+- Preview installers are not notarized or Authenticode-signed.
 
 ## License
 

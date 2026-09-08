@@ -1,83 +1,132 @@
 # PouchTools
 
+**面向日常开发工作的跨平台开发者工具集。**
+
+[![Tauri 2](https://img.shields.io/badge/Tauri-2-24c8db?logo=tauri&logoColor=white)](https://tauri.app/)
+[![Rust 1.92](https://img.shields.io/badge/Rust-1.92.0-000000?logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 **文档语言：** [English](README.md) · 简体中文
 
-基于 Rust 和 Tauri 2 的跨平台开发者工具集。
+PouchTools 是一个轻量的桌面开发者工具集，使用 Rust 和 Tauri 2 构建核心能力，使用 React 构建界面，在单一代码库中支持 macOS、Windows 和 Linux，并优先在本地处理数据。
 
-## 功能
+> **项目状态：** 早期预览版。Base64 是目前第一个可用工具；MD5 和时间戳页面用于展示交互模型。详见[当前限制](#当前限制)。
 
-- Base64 UTF-8 编码与解码
-- MD5 摘要和校验
-- 时间戳与日期转换
-- 浅色和深色主题
-- 中文和英文界面切换
-- 关闭后隐藏到系统托盘，使用 macOS、Windows、Linux 原生窗口控件
+## 项目特点
 
-部分工具仍处于预览占位状态，详见[当前限制](#当前限制)。
+- 支持功能优先采用本地处理
+- 使用原生桌面窗口行为，关闭窗口后隐藏到系统托盘
+- macOS 隐藏到托盘时同步隐藏 Dock 图标
+- 支持浅色和深色主题
+- 支持英文和简体中文界面切换
+- 通过 GitHub Actions 发布 macOS ARM64、macOS Intel、Windows x64 和 Linux x64 安装包
 
-## 开发
+## 工具状态
 
-安装依赖并启动 Tauri 桌面客户端：
+| 工具 | 状态 | 说明 |
+| --- | --- | --- |
+| Base64 | 可用 | UTF-8 文本编码、解码、复制和清空 |
+| MD5 | 预览 | 摘要展示和校验界面，计算逻辑待接入 |
+| 时间戳 | 预览 | 日期与时间戳转换界面，转换逻辑待接入 |
+| JSON 格式化 | 计划中 | 当前为占位入口 |
+| URL 编解码 | 计划中 | 当前为占位入口 |
+| UUID 生成 | 计划中 | 当前为占位入口 |
 
-```bash
-npm install
-npm run tauri:dev
-```
+## 安装
 
-构建前端或本地 release 安装包：
-
-```bash
-npm run build
-npm run tauri:build
-```
-
-关闭主窗口后，PouchTools 会继续运行在系统托盘中。在 macOS 上，窗口隐藏时 Dock 图标也会隐藏。通过托盘菜单选择“显示主窗口”恢复，或选择“退出”彻底退出。
-
-## GitHub Actions 安装包
-
-`.github/workflows/release.yml` 使用 Rust 1.92.0 和 Node.js 24，在 GitHub 云端 runner 上安装锁定依赖并构建正式版安装包。
+从 [GitHub Releases](https://github.com/songqii/PouchTools/releases) 下载最新安装包。
 
 | 平台 | 架构 | 安装包 |
 | --- | --- | --- |
-| macOS | Apple Silicon（ARM64） | `.dmg` |
-| macOS | Intel（x64） | `.dmg` |
-| Windows | x64 | NSIS `.exe`、WiX `.msi` |
-| Linux | x64 | `.deb`、`.AppImage` |
+| macOS | Apple Silicon | `.dmg` |
+| macOS | Intel | `.dmg` |
+| Windows | x64 | NSIS `.exe` 或 WiX `.msi` |
+| Linux | x64 | `.deb` 或 `.AppImage` |
 
-每个目标都会生成 `SHA256SUMS-<target>.txt` 校验文件。Linux 使用 Ubuntu 22.04 构建；`.deb` 会声明 WebKitGTK 运行依赖，托盘显示取决于桌面环境是否支持 AppIndicator。
+每个构建都会附带 `SHA256SUMS-<target>.txt` 校验文件。Linux 安装包使用 Ubuntu 22.04 构建。AppImage 可能需要添加执行权限：
 
-### 从分支构建
+```bash
+chmod +x PouchTools_*.AppImage
+```
 
-推送到 `main` 会构建全部四个目标，也可以在 **Actions → Build installers → Run workflow** 手动运行。分支构建和手动构建不会创建 Release，产物保留 30 天。
+当前预览包尚未完成正式签名或公证。macOS 可能显示 Gatekeeper 提示，Windows 可能显示发布者未验证提示。
 
-### 发布版本
+## 开发
 
-确保 `package.json`、`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml`、`package-lock.json` 和 `src-tauri/Cargo.lock` 的版本一致。可以运行以下命令检查：
+### 环境要求
+
+- Node.js 24
+- Rust 1.92.0
+- 对应平台的 Tauri 2 系统依赖
+
+### 本地运行
+
+```bash
+npm ci
+npm run tauri:dev
+```
+
+构建并验证前端：
+
+```bash
+npm run build
+node scripts/check-release-version.mjs
+node --test scripts/release.test.mjs
+```
+
+构建本地桌面安装包：
+
+```bash
+npm run tauri:build
+```
+
+关闭主窗口后，PouchTools 会隐藏到系统托盘。在 macOS 上，窗口隐藏时 Dock 图标也会隐藏。通过托盘菜单选择“显示主窗口”恢复，或选择“退出”彻底退出。
+
+## 发布自动化
+
+[.github/workflows/release.yml](.github/workflows/release.yml) 使用 GitHub 云端 runner 构建预览安装包：
+
+- 推送到 `main` 会构建全部支持的目标，并上传 Actions 产物。
+- 推送匹配的版本标签（例如 `v0.1.0`）会构建全部目标并创建 Release 草稿。
+- 草稿包含各平台安装包、SHA-256 校验文件，以及 [`docs/releases/`](docs/releases/) 中对应的版本说明。
+- macOS DMG 遇到临时错误时最多自动重试三次。
+
+发布前请保持以下版本一致：
+
+- `package.json`
+- `src-tauri/tauri.conf.json`
+- `src-tauri/Cargo.toml`
+- `package-lock.json`
+- `src-tauri/Cargo.lock`
+
+使用以下命令检查：
 
 ```bash
 node scripts/check-release-version.mjs
 ```
 
-提交版本更新后，推送匹配的标签：
+提交版本更新后创建并推送标签：
 
 ```bash
-git tag -a v0.1.0 -m "PouchTools 0.1.0"
+git tag -a v0.1.0 -m "PouchTools v0.1.0"
 git push origin v0.1.0
 ```
 
-工作流会构建全部目标，创建 GitHub Release 草稿，附加六份安装包和校验文件，并使用 `docs/releases/` 中对应的 Markdown 文件作为 Release 描述。检查无误后，在 GitHub Releases 页面发布草稿。
+## 架构
 
-如果 macOS DMG 打包遇到临时错误，工作流最多会自动重试三次。也可以发送 `release-retry` 类型的 `repository_dispatch` 事件，并在 `client_payload.tag` 中指定现有标签，用 `main` 上最新的工作流重建该版本。
-
-发布任务使用 GitHub 自带的 `GITHUB_TOKEN`，不需要个人访问令牌，但需要 `contents: write` 权限。
+- **界面：** React、Vite 和 Lucide icons
+- **桌面运行时：** Tauri 2
+- **原生层：** Rust
+- **发布 CI：** GitHub Actions
+- **支持目标：** `aarch64-apple-darwin`、`x86_64-apple-darwin`、`x86_64-pc-windows-msvc` 和 `x86_64-unknown-linux-gnu`
 
 ## 当前限制
 
-- MD5 和时间戳页面目前是演示界面，结果使用固定示例，暂时不能用于生产计算。
-- JSON 格式化、URL 编解码和 UUID 生成目前是占位入口。
+- MD5 和时间戳页面目前显示固定的预览数据，不能用于生产计算。
+- JSON、URL 和 UUID 入口仍是占位功能。
 - 搜索、设置、收藏、文件输入、Base64 URL-safe 模式、转换历史、实时当前时间和偏好持久化尚未接入。
 - MD5 是单向摘要，不能解密或还原原文。
-- macOS 安装包使用 ad-hoc 签名，未进行 Developer ID 公证；Windows 安装包未使用 Authenticode 签名，系统可能显示发布者未验证提示。
+- 预览安装包尚未完成公证或 Authenticode 签名。
 
 ## 许可证
 
