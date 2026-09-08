@@ -6,7 +6,7 @@
 [![Rust 1.92](https://img.shields.io/badge/Rust-1.92.0-000000?logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**Documentation:** English · [简体中文](README.zh-CN.md)
+**Documentation:** [English](README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja-JP.md) · [한국어](README.ko-KR.md) · [Italiano](README.it-IT.md) · [Français](README.fr-FR.md) · [Deutsch](README.de-DE.md)
 
 PouchTools is a lightweight desktop toolbox for developers. It uses a Rust and Tauri 2 core with a React interface, processes data locally, and targets macOS, Windows, and Linux from one codebase.
 

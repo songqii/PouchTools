@@ -6,7 +6,7 @@
 [![Rust 1.92](https://img.shields.io/badge/Rust-1.92.0-000000?logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**文档语言：** [English](README.md) · 简体中文
+**文档语言：** [English](README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja-JP.md) · [한국어](README.ko-KR.md) · [Italiano](README.it-IT.md) · [Français](README.fr-FR.md) · [Deutsch](README.de-DE.md)
 
 PouchTools 是一个轻量的桌面开发者工具集，使用 Rust 和 Tauri 2 构建核心能力，使用 React 构建界面，在单一代码库中支持 macOS、Windows 和 Linux，并优先在本地处理数据。
 
