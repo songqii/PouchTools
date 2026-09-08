@@ -2,10 +2,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client';
 import {
   AlertCircle, ArrowLeftRight, ArrowRight, Braces, Check, CheckCircle2, Clipboard,
-  Clock3, Copy, Download, FileCode2, Hash, Languages, Link2, Moon, MoreVertical,
-  Package, RefreshCw, Search, Settings, ShieldCheck, Star, Sun, Trash2, Upload,
-  WandSparkles, X,
+  Clock3, Copy, Download, FileCode2, Hash, Languages, Link2, Maximize2, Minimize2,
+  Minus, Moon, MoreVertical, Package, RefreshCw, Search, Settings, ShieldCheck, Star,
+  Sun, Trash2, Upload, WandSparkles, X,
 } from 'lucide-react';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import {
   decodeBase64, decodeUrl, dateToTimestamp, encodeBase64, encodeUrl, formatDateTime,
   formatJson, generateUuid, md5, minifyJson, timestampToDateString,
@@ -23,6 +24,14 @@ const TOOL_DEFS = [
 const ZONES = ['Asia/Shanghai', 'UTC', 'America/Los_Angeles', 'Europe/Berlin', 'Asia/Tokyo'];
 const DEFAULT_BASE64 = 'Hello, PouchTools!';
 const DEFAULT_JSON = '{\n  "name": "PouchTools",\n  "version": "0.1.0",\n  "local": true\n}';
+
+function getTauriWindow() {
+  return typeof window !== 'undefined' && window.__TAURI_INTERNALS__ ? getCurrentWindow() : null;
+}
+
+function reportWindowError(action, error) {
+  console.warn(`PouchTools ${action} failed`, error);
+}
 
 function storageGet(key, fallback) { try { const value = window.localStorage.getItem(key); return value === null ? fallback : JSON.parse(value); } catch { return fallback; } }
 function storageSet(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); } catch { /* optional in restricted webviews */ } }
@@ -87,16 +96,55 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [workspaceVersion, setWorkspaceVersion] = useState(0);
   const [notice, setNotice] = useState(null);
+  const [maximized, setMaximized] = useState(false);
   const t = useCallback((zh, en) => (english ? en : zh), [english]);
   const notify = useCallback((message, kind = 'success') => { setNotice({ message, kind }); window.clearTimeout(window.__pouchtoolsNoticeTimer); window.__pouchtoolsNoticeTimer = window.setTimeout(() => setNotice(null), 2400); }, []);
   const handleCopy = useCallback(async (value) => { try { await copyToClipboard(value); notify(t('已复制到剪贴板', 'Copied to clipboard')); } catch { notify(t('复制失败，请检查系统权限。', 'Copy failed. Check system permissions.'), 'error'); } }, [notify, t]);
+  const syncMaximized = useCallback(async () => {
+    const appWindow = getTauriWindow();
+    if (!appWindow) return;
+    try { setMaximized(await appWindow.isMaximized()); } catch (error) { reportWindowError('maximize state sync', error); }
+  }, []);
+  const handleWindowDrag = useCallback((event) => {
+    if (event.button !== 0 || event.detail !== 1) return;
+    event.preventDefault();
+    const appWindow = getTauriWindow();
+    if (!appWindow) return;
+    void appWindow.startDragging().catch((error) => reportWindowError('window drag', error));
+  }, []);
+  const handleMinimize = useCallback(() => {
+    const appWindow = getTauriWindow();
+    if (!appWindow) return;
+    void appWindow.minimize().catch((error) => reportWindowError('minimize', error));
+  }, []);
+  const handleToggleMaximize = useCallback(async () => {
+    const appWindow = getTauriWindow();
+    if (!appWindow) return;
+    try { await appWindow.toggleMaximize(); await syncMaximized(); } catch (error) { reportWindowError('maximize toggle', error); }
+  }, [syncMaximized]);
+  const handleClose = useCallback(() => {
+    const appWindow = getTauriWindow();
+    if (!appWindow) return;
+    void appWindow.close().catch((error) => reportWindowError('close', error));
+  }, []);
   useEffect(() => storageSet('pouchtools.active', active), [active]); useEffect(() => storageSet('pouchtools.dark', dark), [dark]); useEffect(() => storageSet('pouchtools.english', english), [english]); useEffect(() => storageSet('pouchtools.favorite', favorite), [favorite]);
+  useEffect(() => {
+    const appWindow = getTauriWindow();
+    if (!appWindow) return undefined;
+    let disposed = false;
+    let unlisten;
+    void syncMaximized();
+    appWindow.onResized(() => { if (!disposed) void syncMaximized(); }).then((cleanup) => {
+      if (disposed) cleanup(); else unlisten = cleanup;
+    }).catch((error) => reportWindowError('resize listener', error));
+    return () => { disposed = true; unlisten?.(); };
+  }, [syncMaximized]);
   useEffect(() => { const onKeyDown = (event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); document.querySelector('.search input')?.focus(); } }; window.addEventListener('keydown', onKeyDown); return () => window.removeEventListener('keydown', onKeyDown); }, []);
   const filteredTools = useMemo(() => { const term = search.trim().toLowerCase(); return term ? TOOL_DEFS.filter((tool) => `${tool.zh} ${tool.en}`.toLowerCase().includes(term)) : TOOL_DEFS; }, [search]);
   const activeTool = TOOL_DEFS.find((tool) => tool.id === active) || TOOL_DEFS[0];
   const resetWorkspace = () => { setActive('base64'); setSearch(''); setFavorite(false); setMenuOpen(false); setSettingsOpen(false); setWorkspaceVersion((version) => version + 1); notify(t('工作区已重置', 'Workspace reset')); };
   const selectTool = (id) => { setActive(id); setMenuOpen(false); };
-  return <div className={`app ${dark ? 'dark' : ''}`}><header className="titlebar"><div className="brand-mini"><Package size={19} /><span>PouchTools</span></div></header><div className="shell"><aside className="sidebar"><div className="brand"><Package size={35} /><strong>PouchTools</strong></div><label className="search"><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('搜索工具', 'Search tools')} /><kbd>⌘K</kbd></label><div className="side-label">{t('常用', 'COMMON')}</div>{filteredTools.filter((tool) => tool.group === 'common').map((tool) => <ToolNav key={tool.id} tool={tool} active={active} onSelect={selectTool} t={t} />)}<div className="side-label more">{t('更多工具', 'MORE')}</div>{filteredTools.filter((tool) => tool.group === 'more').map((tool) => <ToolNav key={tool.id} tool={tool} active={active} onSelect={selectTool} t={t} />)}{filteredTools.length === 0 && <p className="search-empty">{t('没有匹配的工具', 'No matching tools')}</p>}<button className="sidebar-bottom" type="button" onClick={() => setSettingsOpen(true)}><Settings size={20} /><span>{t('设置', 'Settings')}</span></button></aside><main className="main"><div className="page-head"><h1>{t(activeTool.zh, activeTool.en)}</h1><div className="head-actions"><IconButton label={favorite ? t('取消收藏', 'Remove favorite') : t('收藏', 'Add favorite')} className={favorite ? 'favorite-on' : ''} onClick={() => { setFavorite(!favorite); notify(!favorite ? t('已添加收藏', 'Added to favorites') : t('已取消收藏', 'Removed from favorites')); }}><Star size={21} fill={favorite ? 'currentColor' : 'none'} /></IconButton><div className="menu-wrap"><IconButton label={t('更多操作', 'More actions')} onClick={() => setMenuOpen(!menuOpen)}><MoreVertical size={21} /></IconButton>{menuOpen && <div className="popover action-menu"><button type="button" onClick={() => { setSettingsOpen(true); setMenuOpen(false); }}><Settings size={16} />{t('打开设置', 'Open settings')}</button><button type="button" onClick={resetWorkspace}><RefreshCw size={16} />{t('重置工作区', 'Reset workspace')}</button></div>}</div></div></div>{active === 'base64' && <Base64 key={`base64-${workspaceVersion}`} t={t} copy={handleCopy} notify={notify} />}{active === 'md5' && <Md5 key={`md5-${workspaceVersion}`} t={t} copy={handleCopy} notify={notify} />}{active === 'time' && <Timestamp key={`time-${workspaceVersion}`} t={t} copy={handleCopy} notify={notify} />}{active === 'json' && <JsonTool key={`json-${workspaceVersion}`} t={t} copy={handleCopy} notify={notify} />}{active === 'url' && <UrlTool key={`url-${workspaceVersion}`} t={t} copy={handleCopy} notify={notify} />}{active === 'uuid' && <UuidTool key={`uuid-${workspaceVersion}`} t={t} copy={handleCopy} notify={notify} />}</main></div><footer><span><i /> {t('本地处理', 'Local processing')}</span><div><button type="button" onClick={() => setEnglish(!english)}><Languages size={15} />{english ? '中文' : 'EN'}</button><button type="button" onClick={() => setDark(!dark)}>{dark ? <Sun size={15} /> : <Moon size={15} />} {dark ? t('浅色', 'Light') : t('深色', 'Dark')}</button></div></footer>{settingsOpen && <SettingsPanel dark={dark} english={english} setDark={setDark} setEnglish={setEnglish} onReset={resetWorkspace} onClose={() => setSettingsOpen(false)} t={t} />}{notice && <div className={`toast ${notice.kind}`}><span>{notice.kind === 'error' ? <AlertCircle size={17} /> : <CheckCircle2 size={17} />}</span>{notice.message}</div>}</div>;
+  return <div className={`app ${dark ? 'dark' : ''} ${maximized ? 'is-maximized' : ''}`}><header className="titlebar" aria-label={t('窗口标题栏', 'Window title bar')}><div className="titlebar-drag-region" onMouseDown={handleWindowDrag} onDoubleClick={(event) => { event.preventDefault(); void handleToggleMaximize(); }}><div className="brand-mini"><Package size={19} /><span>PouchTools</span></div></div><div className="window-controls" onMouseDown={(event) => event.stopPropagation()}><IconButton label={t('最小化', 'Minimize')} className="window-control" onClick={handleMinimize}><Minus size={17} /></IconButton><IconButton label={maximized ? t('还原窗口', 'Restore window') : t('最大化', 'Maximize')} className="window-control" onClick={handleToggleMaximize}>{maximized ? <Minimize2 size={17} /> : <Maximize2 size={17} />}</IconButton><IconButton label={t('关闭窗口', 'Close window')} className="window-control window-close" onClick={handleClose}><X size={17} /></IconButton></div></header><div className="shell"><aside className="sidebar"><div className="brand"><Package size={35} /><strong>PouchTools</strong></div><label className="search"><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('搜索工具', 'Search tools')} /><kbd>⌘K</kbd></label><div className="side-label">{t('常用', 'COMMON')}</div>{filteredTools.filter((tool) => tool.group === 'common').map((tool) => <ToolNav key={tool.id} tool={tool} active={active} onSelect={selectTool} t={t} />)}<div className="side-label more">{t('更多工具', 'MORE')}</div>{filteredTools.filter((tool) => tool.group === 'more').map((tool) => <ToolNav key={tool.id} tool={tool} active={active} onSelect={selectTool} t={t} />)}{filteredTools.length === 0 && <p className="search-empty">{t('没有匹配的工具', 'No matching tools')}</p>}<button className="sidebar-bottom" type="button" onClick={() => setSettingsOpen(true)}><Settings size={20} /><span>{t('设置', 'Settings')}</span></button></aside><main className="main"><div className="page-head"><h1>{t(activeTool.zh, activeTool.en)}</h1><div className="head-actions"><IconButton label={favorite ? t('取消收藏', 'Remove favorite') : t('收藏', 'Add favorite')} className={favorite ? 'favorite-on' : ''} onClick={() => { setFavorite(!favorite); notify(!favorite ? t('已添加收藏', 'Added to favorites') : t('已取消收藏', 'Removed from favorites')); }}><Star size={21} fill={favorite ? 'currentColor' : 'none'} /></IconButton><div className="menu-wrap"><IconButton label={t('更多操作', 'More actions')} onClick={() => setMenuOpen(!menuOpen)}><MoreVertical size={21} /></IconButton>{menuOpen && <div className="popover action-menu"><button type="button" onClick={() => { setSettingsOpen(true); setMenuOpen(false); }}><Settings size={16} />{t('打开设置', 'Open settings')}</button><button type="button" onClick={resetWorkspace}><RefreshCw size={16} />{t('重置工作区', 'Reset workspace')}</button></div>}</div></div></div>{active === 'base64' && <Base64 key={`base64-${workspaceVersion}`} t={t} copy={handleCopy} notify={notify} />}{active === 'md5' && <Md5 key={`md5-${workspaceVersion}`} t={t} copy={handleCopy} notify={notify} />}{active === 'time' && <Timestamp key={`time-${workspaceVersion}`} t={t} copy={handleCopy} notify={notify} />}{active === 'json' && <JsonTool key={`json-${workspaceVersion}`} t={t} copy={handleCopy} notify={notify} />}{active === 'url' && <UrlTool key={`url-${workspaceVersion}`} t={t} copy={handleCopy} notify={notify} />}{active === 'uuid' && <UuidTool key={`uuid-${workspaceVersion}`} t={t} copy={handleCopy} notify={notify} />}</main></div><footer><span><i /> {t('本地处理', 'Local processing')}</span><div><button type="button" onClick={() => setEnglish(!english)}><Languages size={15} />{english ? '中文' : 'EN'}</button><button type="button" onClick={() => setDark(!dark)}>{dark ? <Sun size={15} /> : <Moon size={15} />} {dark ? t('浅色', 'Light') : t('深色', 'Dark')}</button></div></footer>{settingsOpen && <SettingsPanel dark={dark} english={english} setDark={setDark} setEnglish={setEnglish} onReset={resetWorkspace} onClose={() => setSettingsOpen(false)} t={t} />}{notice && <div className={`toast ${notice.kind}`}><span>{notice.kind === 'error' ? <AlertCircle size={17} /> : <CheckCircle2 size={17} />}</span>{notice.message}</div>}</div>;
 }
 
 function ToolNav({ tool, active, onSelect, t }) { const { Icon } = tool; return <button className={`nav ${active === tool.id ? 'active' : ''}`} type="button" onClick={() => onSelect(tool.id)}><Icon size={20} /><span>{t(tool.zh, tool.en)}</span></button>; }
