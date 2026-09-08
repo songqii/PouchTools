@@ -50,6 +50,10 @@ git push origin v0.1.0
 附上六份安装包和校验文件，并自动生成版本说明。检查后在 GitHub Releases 点击 **Publish release**。
 失败可在 Actions 中重跑；已发布的版本不会被工作流覆盖，更新应使用新版本标签。
 
+macOS 的 DMG 生成失败时会自动重试，最多三次；编译错误直接报告失败。
+也可发送 `repository_dispatch` 事件 `release-retry`，并在 `client_payload.tag` 中指定现有版本标签。
+此方式使用默认分支上的最新工作流，检出指定标签的源码，适合修复 CI 后重建原版本，无需移动标签。
+
 不需要配置个人访问令牌，发布任务使用 GitHub 自带的 `GITHUB_TOKEN`，只有该任务具有
 `contents: write` 权限。如果组织策略禁止写入，需由仓库管理员允许工作流创建 Release。
 

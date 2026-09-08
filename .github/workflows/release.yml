@@ -7,12 +7,14 @@ on:
     tags:
       - 'v[0-9]*.[0-9]*.[0-9]*'
   workflow_dispatch:
+  repository_dispatch:
+    types: [release-retry]
 
 permissions:
   contents: read
 
 concurrency:
-  group: installers-${{ github.ref }}
+  group: installers-${{ github.event.client_payload.tag || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -21,13 +23,21 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.client_payload.tag || github.ref }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
       - name: Verify version consistency
-        run: node scripts/check-release-version.mjs
+        run: |
+          if [[ "$EVENT_NAME" == 'repository_dispatch' && -z "$RELEASE_TAG" ]]; then
+            echo 'release-retry requires a version tag' >&2
+            exit 1
+          fi
+          node scripts/check-release-version.mjs
         env:
-          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.client_payload.tag || (github.ref_type == 'tag' && github.ref_name || '') }}
       - name: Test release safeguards
         run: node --test scripts/release.test.mjs
 
@@ -67,6 +77,8 @@ jobs:
       APPIMAGE_EXTRACT_AND_RUN: '1'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.client_payload.tag || github.ref }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
@@ -93,7 +105,18 @@ jobs:
         if: runner.os == 'macOS'
         run: echo 'APPLE_SIGNING_IDENTITY=-' >> "$GITHUB_ENV"
       - name: Build release installers
-        run: npm run tauri -- build --ci --target "$BUILD_TARGET" --bundles "$BUNDLE_FORMATS" -- --locked
+        run: |
+          for attempt in 1 2 3; do
+            log="$RUNNER_TEMP/tauri-build-$attempt.log"
+            if npm run tauri -- build --verbose --ci --target "$BUILD_TARGET" --bundles "$BUNDLE_FORMATS" -- --locked 2>&1 | tee "$log"; then
+              exit 0
+            fi
+            if [[ "$RUNNER_OS" != 'macOS' || "$attempt" == 3 ]] || ! grep -q 'error running bundle_dmg.sh' "$log"; then
+              exit 1
+            fi
+            echo "DMG packaging failed on attempt $attempt; retrying in 10 seconds."
+            sleep 10
+          done
       - name: Collect installers and checksums
         run: node scripts/collect-installers.mjs
       - name: Upload installers
@@ -107,13 +130,15 @@ jobs:
 
   release:
     name: Create draft release
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || github.event_name == 'repository_dispatch'
     needs: build
     runs-on: ubuntu-22.04
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.client_payload.tag || github.ref }}
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: PouchTools-*
@@ -123,7 +148,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ github.event.client_payload.tag || github.ref_name }}
         shell: bash
         run: |
           notes="docs/releases/$RELEASE_TAG.md"
