@@ -1,64 +1,84 @@
 # PouchTools
-跨平台开发者工具集，基于 Rust + Tauri 2。
 
-开发时运行 `npm install`，然后运行 `npm run tauri:dev`。
+**Documentation:** English · [简体中文](README.zh-CN.md)
 
-关闭主窗口会隐藏到系统托盘，应用保持运行，窗口中的内容会保留。
-macOS 隐藏窗口时也会隐藏 Dock 图标，顶部菜单栏保留托盘图标。
-点击托盘图标，选择“显示主窗口 / Show window”恢复窗口和 Dock 图标；
-选择“退出 / Quit”才会完全退出应用。系统最小化按钮仍采用系统默认行为。
+A cross-platform developer utility collection built with Rust and Tauri 2.
 
-## GitHub Actions 安装包
+## Features
 
-工作流位于 `.github/workflows/release.yml`，使用固定的 Rust 1.92.0 和 Node.js 24，
-通过 `npm ci` 和 Cargo `--locked` 安装锁定的依赖，构建 release 模式安装包。
+- Base64 UTF-8 encoding and decoding
+- MD5 hashing and checksum verification
+- Timestamp and date conversion
+- Light and dark themes
+- English and Simplified Chinese interface switching
+- Close-to-tray behavior with native macOS, Windows, and Linux window controls
 
-| 平台 | 架构 | 安装包 |
+Some tools are still preview placeholders. See [Current limitations](#current-limitations).
+
+## Development
+
+Install dependencies and start the Tauri desktop client:
+
+```bash
+npm install
+npm run tauri:dev
+```
+
+Build the frontend or a local release bundle:
+
+```bash
+npm run build
+npm run tauri:build
+```
+
+When the main window is closed, PouchTools stays in the system tray. On macOS the Dock icon is hidden while the window is hidden. Select **Show window** from the tray menu to restore it, or select **Quit** to exit completely.
+
+## GitHub Actions installers
+
+The workflow in `.github/workflows/release.yml` uses Rust 1.92.0 and Node.js 24, installs locked dependencies, and builds release installers in GitHub-hosted runners.
+
+| Platform | Architecture | Packages |
 | --- | --- | --- |
-| macOS | Apple Silicon（ARM64） | `.dmg` |
-| macOS | Intel（x64） | `.dmg` |
-| Windows | x64 | NSIS `.exe`、WiX `.msi` |
-| Linux | x64 | `.deb`、`.AppImage` |
+| macOS | Apple Silicon (ARM64) | `.dmg` |
+| macOS | Intel (x64) | `.dmg` |
+| Windows | x64 | NSIS `.exe`, WiX `.msi` |
+| Linux | x64 | `.deb`, `.AppImage` |
 
-每个目标都会生成带版本号和架构的安装包，以及 `SHA256SUMS-<target>.txt` 校验文件。
-Linux 使用 Ubuntu 22.04 构建；`.deb` 会声明 WebKitGTK 等运行依赖。
-Linux 托盘需要桌面环境支持 AppIndicator，GNOME 可能需要相应扩展。
+Each target also produces a `SHA256SUMS-<target>.txt` file. Linux packages are built on Ubuntu 22.04. The `.deb` declares its WebKitGTK runtime dependencies, and tray support depends on the desktop environment's AppIndicator support.
 
-### 第一次使用
+### Build from a branch
 
-先将本项目源码、`.github`、`scripts`、图标、`rust-toolchain.toml`、`package-lock.json`
-和 `src-tauri/Cargo.lock` 提交并推送到 GitHub。`.gitignore` 已排除依赖和本机构建产物。
+Pushes to `main` build all four targets. You can also use **Actions → Build installers → Run workflow**. Branch and manual builds do not create a Release; their artifacts are retained for 30 days.
 
-推送到默认分支后，可以在仓库 **Actions → Build installers → Run workflow** 手动构建。
-推送 `main` 分支也会自动构建。分支构建和手动构建不创建 Release，产物在运行页面的 **Artifacts** 中保留 30 天。
+### Publish a release
 
-### 发布正式版本
+Keep the versions in `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, `package-lock.json`, and `src-tauri/Cargo.lock` aligned. Check them with:
 
-确保 `package.json`、`src-tauri/tauri.conf.json` 和 `src-tauri/Cargo.toml` 的版本一致，
-并更新两个锁文件。例如升级到 `0.1.1` 时，执行 `npm version 0.1.1 --no-git-tag-version`，
-手动更新 Tauri 与 Cargo 的版本，再执行 `cargo check --manifest-path src-tauri/Cargo.toml` 更新 Cargo.lock。
-可用 `node scripts/check-release-version.mjs` 提前检查。
+```bash
+node scripts/check-release-version.mjs
+```
 
-提交并推送版本更新后，为对应提交打标签。例如当前首版：
+After committing a version update, push a matching tag:
 
 ```bash
 git tag -a v0.1.0 -m "PouchTools 0.1.0"
 git push origin v0.1.0
 ```
 
-标签版本必须与应用版本一致。四个构建全部成功后，Actions 会创建 **Release 草稿**，
-附上六份安装包和校验文件，并自动生成版本说明。检查后在 GitHub Releases 点击 **Publish release**。
-失败可在 Actions 中重跑；已发布的版本不会被工作流覆盖，更新应使用新版本标签。
+The workflow builds every target, creates a draft GitHub Release, attaches six installers and their checksum files, and uses the matching file in `docs/releases/` as the release description. Review the draft and publish it from GitHub Releases.
 
-macOS 的 DMG 生成失败时会自动重试，最多三次；编译错误直接报告失败。
-也可发送 `repository_dispatch` 事件 `release-retry`，并在 `client_payload.tag` 中指定现有版本标签。
-此方式使用默认分支上的最新工作流，检出指定标签的源码，适合修复 CI 后重建原版本，无需移动标签。
+If macOS DMG packaging fails transiently, the workflow retries it up to three times. A `repository_dispatch` event with type `release-retry` and `client_payload.tag` can rebuild an existing tag using the latest workflow on `main`.
 
-不需要配置个人访问令牌，发布任务使用 GitHub 自带的 `GITHUB_TOKEN`，只有该任务具有
-`contents: write` 权限。如果组织策略禁止写入，需由仓库管理员允许工作流创建 Release。
+The release job uses GitHub's built-in `GITHUB_TOKEN`; no personal access token is required. It needs `contents: write` permission.
 
-### 签名状态
+## Current limitations
 
-当前 macOS 使用 ad-hoc 签名，未做 Apple Developer ID 签名和公证；Windows 安装包未做 Authenticode 签名。
-因此下载后可能显示 Gatekeeper / SmartScreen 提示。正式分发需要受信任签名时，
-应先配置相应开发者证书及公证凭据，再接入签名步骤；release 模式构建本身不代表已签名或已公证。
+- MD5 and timestamp screens are currently preview interfaces with fixed sample results; they are not ready for production calculations.
+- JSON formatting, URL encoding/decoding, and UUID generation are placeholder entries.
+- Search, settings, favorites, file input, Base64 URL-safe mode, conversion history, live current time, and preference persistence are not connected yet.
+- MD5 is a one-way hash and cannot decrypt or restore the original input.
+- macOS packages use ad-hoc signing without Developer ID notarization. Windows packages do not use Authenticode signing, so the operating system may show an unverified publisher warning.
+
+## License
+
+PouchTools is released under the [MIT License](LICENSE).
