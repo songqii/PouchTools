@@ -6,7 +6,7 @@
 
 PouchTools est une collection légère d'outils de bureau pour développeurs, construite avec Rust et Tauri 2, avec une interface React et un seul code source pour macOS, Windows et Linux.
 
-> **État du projet :** première version de prévisualisation. Base64 est le premier outil utilisable ; les écrans MD5 et timestamp présentent encore le modèle d'interaction prévu.
+> **État du projet :** préversion fonctionnelle. Les six outils fonctionnent localement dans le client Tauri, avec un focus sur les transformations essentielles et un flux de travail desktop compact.
 
 ## Fonctionnalités
 
@@ -15,18 +15,19 @@ PouchTools est une collection légère d'outils de bureau pour développeurs, co
 - Masquage de l'icône du Dock sur macOS lorsque l'application est masquée
 - Thèmes clair et sombre
 - Interface en anglais et chinois simplifié
+- Préférences persistantes, recherche, favoris, copie, effacement et téléchargement
 - Builds de publication via GitHub Actions pour macOS ARM64, macOS Intel, Windows x64 et Linux x64
 
 ## État des outils
 
 | Outil | État | Notes |
 | --- | --- | --- |
-| Base64 | Disponible | Encodage / décodage UTF-8, copie et effacement |
-| MD5 | Prévisualisation | Interface de hachage et de vérification ; calcul en cours |
-| Timestamp | Prévisualisation | Interface de conversion date/timestamp ; conversion en cours |
-| Formateur JSON | Prévu | Placeholder |
-| Encodeur / décodeur URL | Prévu | Placeholder |
-| Générateur UUID | Prévu | Placeholder |
+| Base64 | Disponible | Encodage / décodage UTF-8 et URL-safe, historique, copie, effacement et téléchargement |
+| MD5 | Disponible | Hachage de texte et de fichiers, casse et vérification |
+| Timestamp | Disponible | Conversion secondes/millisecondes, fuseaux horaires, horloge en direct et copie |
+| Formateur JSON | Disponible | Mise en forme, minification, indentation, tri des clés, copie et téléchargement |
+| Encodeur / décodeur URL | Disponible | Mode composant ou URL complète, copie, effacement et échange |
+| Générateur UUID | Disponible | Génération d'un ou plusieurs UUID v4 RFC 4122 |
 
 ## Installation
 
@@ -45,6 +46,7 @@ npm run tauri:dev
 
 ```bash
 npm run build
+npm run test:utils
 npm run tauri:build
 node scripts/check-release-version.mjs
 node --test scripts/release.test.mjs
@@ -58,7 +60,7 @@ La fermeture de la fenêtre principale laisse PouchTools actif dans la zone de n
 
 ## Limitations
 
-Les écrans MD5 et timestamp affichent actuellement des valeurs fixes de prévisualisation. JSON, URL et UUID sont des placeholders. La recherche, les paramètres, les fichiers, l'historique, l'heure en direct et la sauvegarde des préférences ne sont pas encore connectés. MD5 est un hachage à sens unique et ne peut pas être déchiffré.
+Toutes les transformations sont effectuées localement dans le client et les données saisies ne sont pas téléversées. MD5 est un hachage à sens unique et ne peut pas être déchiffré.
 
 ## Licence
 

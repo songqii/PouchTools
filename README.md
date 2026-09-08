@@ -10,7 +10,7 @@
 
 PouchTools is a lightweight desktop toolbox for developers. It uses a Rust and Tauri 2 core with a React interface, processes data locally, and targets macOS, Windows, and Linux from one codebase.
 
-> **Project status:** Early preview. Base64 is the first usable tool; MD5 and timestamp screens currently demonstrate the planned interaction model. See [Limitations](#limitations).
+> **Project status:** Functional preview. All six tools run locally in the Tauri client; the current release focuses on core transformations and a compact desktop workflow.
 
 ## Highlights
 
@@ -19,18 +19,19 @@ PouchTools is a lightweight desktop toolbox for developers. It uses a Rust and T
 - macOS Dock hiding while the application is in the tray
 - Light and dark themes
 - English and Simplified Chinese interface switching
+- Persistent preferences, search, favorites, copy, clear, and download actions
 - Release automation for macOS ARM64, macOS Intel, Windows x64, and Linux x64
 
 ## Tools
 
 | Tool | Status | Notes |
 | --- | --- | --- |
-| Base64 | Available | UTF-8 text encode/decode, copy, and clear |
-| MD5 | Preview | Hash display and verification UI; calculation integration is pending |
-| Timestamp | Preview | Date/timestamp conversion UI; conversion integration is pending |
-| JSON formatter | Planned | Placeholder entry |
-| URL encoder/decoder | Planned | Placeholder entry |
-| UUID generator | Planned | Placeholder entry |
+| Base64 | Available | UTF-8 text encode/decode, URL-safe mode, history, copy, clear, and download |
+| MD5 | Available | Text and file hashing, case selection, copy, and expected-hash verification |
+| Timestamp | Available | Seconds/milliseconds conversion, timezone formatting, live clock, and copy |
+| JSON formatter | Available | Pretty-print, minify, indentation selection, key sorting, copy, and download |
+| URL encoder/decoder | Available | Component or full-URL mode, copy, clear, and swap |
+| UUID generator | Available | RFC 4122 version 4 generation for one or more values |
 
 ## Install
 
@@ -70,6 +71,7 @@ Build and validate the frontend:
 
 ```bash
 npm run build
+npm run test:utils
 node scripts/check-release-version.mjs
 node --test scripts/release.test.mjs
 ```
@@ -122,9 +124,7 @@ git push origin v0.1.0
 
 ## Limitations
 
-- MD5 and timestamp pages currently show fixed preview values and are not ready for production calculations.
-- JSON, URL, and UUID entries are placeholders.
-- Search, settings, favorites, file input, Base64 URL-safe mode, conversion history, live time, and preference persistence are not connected yet.
+- All transformations run in the client and do not upload input data.
 - MD5 is a one-way hash; it cannot decrypt or restore the original input.
 - Preview installers are not notarized or Authenticode-signed.
 
