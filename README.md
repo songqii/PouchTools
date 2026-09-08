@@ -30,7 +30,7 @@ Linux 托盘需要桌面环境支持 AppIndicator，GNOME 可能需要相应扩�
 和 `src-tauri/Cargo.lock` 提交并推送到 GitHub。`.gitignore` 已排除依赖和本机构建产物。
 
 推送到默认分支后，可以在仓库 **Actions → Build installers → Run workflow** 手动构建。
-手动构建不创建 Release，产物在运行页面的 **Artifacts** 中保留 30 天。
+推送 `main` 分支也会自动构建。分支构建和手动构建不创建 Release，产物在运行页面的 **Artifacts** 中保留 30 天。
 
 ### 发布正式版本
 
