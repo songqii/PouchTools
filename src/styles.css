@@ -48,3 +48,8 @@
 .dark .windows-controls .window-close:hover:not(:disabled){background:#c0443c;color:#fff}
 .dark .linux-controls .window-control:hover:not(:disabled){background:#303b3c;color:#8be0ba}
 .dark .linux-controls .window-close:hover:not(:disabled){background:#b94740;color:#fff}
+
+/* Let the transparent Tauri surface show through the rounded application shell. */
+html,body,#root{width:100%;height:100%;margin:0;background:transparent;overflow:hidden}
+:root{background:transparent}
+.app{width:100%;height:100%}

@@ -10,6 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
         "title": "PouchTools",
@@ -19,6 +20,7 @@
         "minHeight": 600,
         "resizable": true,
         "decorations": false,
+        "transparent": true,
         "shadow": false
       }
     ],
